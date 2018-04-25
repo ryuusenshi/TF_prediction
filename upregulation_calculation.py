@@ -17,7 +17,15 @@ class ORFManipulator(object):
         if self._orf_to_snp_df is None:
             self._orf_to_snp_df = pandas.read_csv('snp_orf.csv')
             self._orf_info = pandas.read_csv('id_to_gene_name.csv')
- 
+
+    def gene_name_to_orf_id(self, gene_name):
+        df = self._orf_info.loc[self._orf_info['GENE'] == gene_name.upper()]
+
+        try:
+            return df['ID'].values[0]
+        except IndexError:
+            return -1
+
     def orf_id_to_snp(self, orf_id):
         df = self._orf_to_snp_df.loc[self._orf_to_snp_df['ID'] == int(orf_id)]
 

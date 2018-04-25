@@ -3,6 +3,25 @@ import csv
 from collections import defaultdict
 
 
+def create_annotated_target_table():
+    # input
+    df = pandas.read_csv('./RegulationMatrix_Documented_2013927.csv')
+    TFs = df['6732'].apply(lambda x: x[:-1] if x.endswith('p') else x)
+    TFids = TFs.apply(lambda x: int(orf_manipulator.gene_name_to_orf_id(x)))
+
+    df['6732'] = TFids
+    df = df.set_index('6732')
+
+    df.columns = df.columns.map(lambda x: orf_manipulator.gene_name_to_orf_id(x))
+    # drop rows - unidentified TFs
+    df = df.drop(-1, axis=0)
+    # drop columns - unidentified target genes
+    df = df.drop(-1, axis=1)
+
+    # output
+    df.to_csv('annotated_tf_targets.csv') 
+
+
 def tf_to_id_table():
     f = open('tf_name_to_id.csv', 'w')
     f_missing = open('tf_missing_ids.csv', 'w')
