@@ -1,0 +1,87 @@
+import pandas
+
+from preprocessing import snp_ids_for_tfs
+
+
+def _find_genotype_duplicates(snp_df, snp_ids, snp_id):
+    # finds duplicate of snp_id within snp_ids
+    copy_snps = set()
+    for is_copy_snp_id in snp_ids[snp_ids.index(snp_id)+1:]:
+        if sum(snp_df[snp_id].values - snp_df[is_copy_snp_id].values) == 0:
+            copy_snps.add(is_copy_snp_id)
+
+    return copy_snps
+
+
+def genotype_duplicates(snp_id):
+    snp_ids = snp_ids_for_tfs()
+
+    snp_df = pandas.read_csv('../../../data/matrix_genotypes.txt', delimiter='\t')
+
+    # only SNPs for acutal TFs
+    snp_df = snp_df.loc[snp_ids]
+    snp_df = snp_df.drop(columns=['_probePairKey'])
+    
+    # columns <--> rows
+    snp_df = snp_df.transpose()
+    snp_df.index.name = 'CONDITION'
+    return _find_genotype_duplicates(snp_df, snp_ids, snp_id)
+
+
+def _one_hotcode_genotype(snp_ids, out_file):
+    snp_df = pandas.read_csv('../../../data/matrix_genotypes.txt', delimiter='\t')
+
+    # only SNPs for acutal TFs
+    snp_df = snp_df.loc[snp_ids]
+    snp_df = snp_df.drop(columns=['_probePairKey'])
+    
+    # columns <--> rows
+    snp_df = snp_df.transpose()
+    snp_df.index.name = 'CONDITION'
+    for snp_id in snp_ids:
+        hotcoded_snp = pandas.get_dummies(snp_df[snp_id], prefix=str('SNP_%d' % snp_id))
+        snp_df = snp_df.drop(columns=[snp_id])
+        snp_df = snp_df.join(hotcoded_snp)
+
+    snp_df.to_csv(out_file)
+    return snp_df
+
+
+def one_hotcode_genotype_all():
+    snp_ids = snp_ids_for_tfs()
+
+    return _one_hotcode_genotype(snp_ids, '../../../data/product/matrix_genotypes_hotcoded_snps.csv')
+
+
+def one_hotcode_genotype_only_unique_snps():
+    snp_ids = snp_ids_for_tfs()
+
+    snp_df = pandas.read_csv('../../../data/matrix_genotypes.txt', delimiter='\t')
+
+    # only SNPs for acutal TFs
+    snp_df = snp_df.loc[snp_ids]
+    snp_df = snp_df.drop(columns=['_probePairKey'])
+    
+    # columns <--> rows
+    snp_df = snp_df.transpose()
+    snp_df.index.name = 'CONDITION'
+
+    # find duplicates
+    copy_snps = set()
+    for snp_id in snp_ids:
+        if snp_id in copy_snps:
+            continue
+
+        for is_copy_snp_id in snp_ids[snp_ids.index(snp_id)+1:]:
+            if sum(snp_df[snp_id].values - snp_df[is_copy_snp_id].values) == 0:
+                copy_snps.add(is_copy_snp_id)
+
+    snp_ids = list(set(snp_ids).diff(copy_snps))
+    
+    return _one_hotcode_genotype(snp_ids, '../../../data/product/matrix_genotypes_hotcoded_snps_collapsed.csv')
+
+
+def one_hotcode_genotype_only_important(snp_ids):
+    #snp_ids = [25, 68, 251, 2296, 1643]
+
+    return _one_hotcode_genotype(snp_ids, '../../../data/product/matrix_genotypes_hotcoded_snps_only_important.csv')
